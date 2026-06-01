@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../i18n/LanguageContext'
-import { getCats, getActiveDietPlan, getTodayFeedings, addFeeding, deleteFeeding } from '../lib/api'
+import { getCats, getActiveDietPlan, getTodayFeedings, addFeeding, deleteFeeding, createDietPlan } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import type { Cat, DietPlan, FeedingLog } from '../types/database'
-import { Plus, Undo2, Clock } from 'lucide-react'
+import { Plus, Undo2, Clock, Settings2 } from 'lucide-react'
 import { format } from 'date-fns'
 
 type FeedingWithProfile = FeedingLog & { profiles: { display_name: string } | null }
@@ -22,6 +22,11 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [feedingLoading, setFeedingLoading] = useState(false)
 
+  // Quota setup form
+  const [showQuotaForm, setShowQuotaForm] = useState(false)
+  const [quotaInput, setQuotaInput] = useState('54')
+  const [quotaSaving, setQuotaSaving] = useState(false)
+
   const loadData = useCallback(async (catId?: string) => {
     try {
       const catList = await getCats()
@@ -35,6 +40,7 @@ export default function DashboardPage() {
         ])
         setDietPlan(plan)
         setFeedings(logs)
+        if (!plan) setShowQuotaForm(true)
       }
     } catch (err) {
       console.error(err)
@@ -59,7 +65,7 @@ export default function DashboardPage() {
   const quota = dietPlan?.daily_quota_g ?? 0
   const remaining = Math.max(0, quota - totalFed)
   const progress = quota > 0 ? Math.min(100, (totalFed / quota) * 100) : 0
-  const isOver = totalFed > quota
+  const isOver = totalFed > quota && quota > 0
 
   const handleFeed = async (amount: number) => {
     if (!user || !selectedCat || amount <= 0) return
@@ -79,6 +85,22 @@ export default function DashboardPage() {
     } catch (err) { console.error(err) }
   }
 
+  const handleSetQuota = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user || !selectedCat) return
+    setQuotaSaving(true)
+    try {
+      await createDietPlan({
+        cat_id: selectedCat.id,
+        daily_quota_g: parseFloat(quotaInput),
+        created_by: user.id,
+      })
+      setShowQuotaForm(false)
+      await loadData(selectedCat.id)
+    } catch (err) { console.error(err) }
+    setQuotaSaving(false)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-amber-50 flex items-center justify-center">
@@ -87,7 +109,7 @@ export default function DashboardPage() {
     )
   }
 
-  if (!selectedCat || !dietPlan) {
+  if (!selectedCat) {
     return (
       <div className="min-h-screen bg-amber-50 flex items-center justify-center p-4">
         <p className="text-gray-500">{t.common.noData}</p>
@@ -98,17 +120,56 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-amber-50 pb-20">
       {/* Header */}
-      <div className="bg-white px-4 py-3 flex items-center gap-2 shadow-sm">
-        <span className="text-xl">🐱</span>
-        {cats.length > 1 ? (
-          <select value={selectedCat.id} onChange={e => loadData(e.target.value)}
-            className="font-bold text-gray-800 bg-transparent">
-            {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        ) : (
-          <h1 className="font-bold text-gray-800">{selectedCat.name}</h1>
+      <div className="bg-white px-4 py-3 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">🐱</span>
+          {cats.length > 1 ? (
+            <select value={selectedCat.id} onChange={e => loadData(e.target.value)}
+              className="font-bold text-gray-800 bg-transparent">
+              {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          ) : (
+            <h1 className="font-bold text-gray-800">{selectedCat.name}</h1>
+          )}
+        </div>
+        {dietPlan && (
+          <button onClick={() => { setQuotaInput(String(dietPlan.daily_quota_g)); setShowQuotaForm(true) }}
+            className="p-2 text-gray-400 hover:text-amber-600 transition-colors" title={t.dashboard.editQuota}>
+            <Settings2 className="w-5 h-5" />
+          </button>
         )}
       </div>
+
+      {/* Quota Setup / Edit Modal */}
+      {showQuotaForm && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleSetQuota} className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4">
+            <h3 className="text-lg font-bold text-gray-800">{t.dashboard.setQuota}</h3>
+            <p className="text-sm text-gray-500">{t.dashboard.setQuotaDesc}</p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t.dashboard.dailyQuota}</label>
+              <div className="flex items-center gap-2">
+                <input type="number" value={quotaInput} onChange={e => setQuotaInput(e.target.value)}
+                  className="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg text-center text-lg focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  min={1} step={0.5} required autoFocus />
+                <span className="text-gray-500 font-medium">g</span>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              {dietPlan && (
+                <button type="button" onClick={() => setShowQuotaForm(false)}
+                  className="flex-1 py-2.5 border border-gray-200 rounded-lg text-gray-600 font-medium hover:bg-gray-50">
+                  {t.common.cancel}
+                </button>
+              )}
+              <button type="submit" disabled={quotaSaving}
+                className="flex-1 py-2.5 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 disabled:opacity-50">
+                {quotaSaving ? t.common.loading : t.common.save}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Progress Ring */}
       <div className="px-4 py-6">
@@ -129,7 +190,9 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-4 text-center">
-            {isOver ? (
+            {!dietPlan ? (
+              <p className="text-gray-400 text-sm">{t.dashboard.noQuotaHint}</p>
+            ) : isOver ? (
               <p className="text-red-500 font-medium">⚠️ {t.dashboard.overBy} {(totalFed - quota).toFixed(1)}g</p>
             ) : (
               <p className="text-gray-500">{t.dashboard.remaining} <span className="font-bold text-amber-600">{remaining.toFixed(1)}g</span></p>

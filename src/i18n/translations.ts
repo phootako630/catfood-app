@@ -26,6 +26,9 @@ export const translations = {
       quickFeed: '快捷加粮', customPlaceholder: '自定义 (g)',
       todayLog: '今日记录', times: '次',
       noFeedings: '还没有喂食记录', undo: '撤销', unknown: '未知',
+      setQuota: '设置每日配额', setQuotaDesc: '医生建议的每日猫粮总量',
+      dailyQuota: '每日配额', editQuota: '修改配额',
+      noQuotaHint: '请先设置每日配额',
     },
     weight: {
       title: '体重记录', addWeight: '记录体重',
@@ -69,6 +72,9 @@ export const translations = {
       quickFeed: 'Quick Feed', customPlaceholder: 'Custom (g)',
       todayLog: "Today's Log", times: 'times',
       noFeedings: 'No feedings yet', undo: 'Undo', unknown: 'Unknown',
+      setQuota: 'Set Daily Quota', setQuotaDesc: 'Vet-recommended daily food amount',
+      dailyQuota: 'Daily Quota', editQuota: 'Edit Quota',
+      noQuotaHint: 'Set a daily quota first',
     },
     weight: {
       title: 'Weight Log', addWeight: 'Record Weight',
