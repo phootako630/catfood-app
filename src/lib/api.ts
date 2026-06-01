@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { getDayWindowUtc } from './dateRange'
 import type { Cat, DietPlan, FeedingLog, WeightLog, Profile } from '../types/database'
 
 // ── Cats ──
@@ -54,35 +55,18 @@ export async function createDietPlan(plan: {
 
 // ── Feeding Logs ──
 export async function getTodayFeedings(catId: string, timezone: string = 'Asia/Shanghai') {
-  // Calculate today's range in user's timezone
-  const now = new Date()
-  const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: timezone })
-  const todayStr = formatter.format(now) // YYYY-MM-DD in user's TZ
-
-  // Anchor the day boundaries in UTC (note the trailing "Z"), then shift by the
-  // target timezone offset exactly once. Parsing WITHOUT "Z" would make the
-  // browser apply its own local offset first, double-counting the shift.
-  const tzOffset = getTimezoneOffsetMs(timezone)
-  const midnightUtc = new Date(`${todayStr}T00:00:00Z`).getTime()
-  const utcStart = new Date(midnightUtc - tzOffset).toISOString()
-  const utcEnd = new Date(midnightUtc - tzOffset + 24 * 60 * 60 * 1000 - 1).toISOString()
+  // Pure window calculation lives in dateRange.ts (unit-tested).
+  const { startUtc, endUtc } = getDayWindowUtc(timezone)
 
   const { data, error } = await supabase
     .from('feeding_logs')
     .select('*, profiles:fed_by(display_name)')
     .eq('cat_id', catId)
-    .gte('fed_at', utcStart)
-    .lte('fed_at', utcEnd)
+    .gte('fed_at', startUtc)
+    .lte('fed_at', endUtc)
     .order('fed_at', { ascending: true })
   if (error) throw error
   return data as (FeedingLog & { profiles: { display_name: string } | null })[]
-}
-
-function getTimezoneOffsetMs(timezone: string): number {
-  const now = new Date()
-  const utcStr = now.toLocaleString('en-US', { timeZone: 'UTC' })
-  const tzStr = now.toLocaleString('en-US', { timeZone: timezone })
-  return new Date(tzStr).getTime() - new Date(utcStr).getTime()
 }
 
 export async function addFeeding(log: { cat_id: string; amount_g: number; fed_by: string; note?: string }) {
