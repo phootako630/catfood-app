@@ -132,6 +132,30 @@ export async function updateProfile(userId: string, fields: { display_name?: str
 }
 
 // ── Household ──
+function generateInviteCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no O/0/I/1
+  let code = ''
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)]
+  return code
+}
+
+export async function createHousehold(name: string, userId: string) {
+  const inviteCode = generateInviteCode()
+  const { data, error } = await supabase
+    .from('households')
+    .insert({ name, invite_code: inviteCode, created_by: userId })
+    .select()
+    .single()
+  if (error) throw error
+  // Link profile to this household
+  const { error: profileErr } = await supabase
+    .from('profiles')
+    .update({ household_id: data.id })
+    .eq('id', userId)
+  if (profileErr) throw profileErr
+  return data
+}
+
 export async function joinHousehold(inviteCode: string, userId: string) {
   const { data: household, error } = await supabase
     .from('households')

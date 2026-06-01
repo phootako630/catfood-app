@@ -1,22 +1,42 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../i18n/LanguageContext'
-import { addCat, createDietPlan, joinHousehold } from '../lib/api'
-import { Cat, Users } from 'lucide-react'
+import { addCat, createDietPlan, joinHousehold, createHousehold } from '../lib/api'
+import { useToast } from '../components/Toast'
+import { Cat, Users, Loader2 } from 'lucide-react'
 
 interface Props { onComplete: () => void }
 
 export default function SetupPage({ onComplete }: Props) {
   const { user, profile, refreshProfile } = useAuth()
-  const { t } = useLang()
+  const { t, lang } = useLang()
+  const { show: showToast, ToastElement } = useToast()
+
+  // Always start at 'choice' if no household; if has household but no cats → 'new-cat'
   const [step, setStep] = useState<'choice' | 'new-cat' | 'join'>(
     profile?.household_id ? 'new-cat' : 'choice'
   )
   const [catName, setCatName] = useState('')
   const [dailyQuota, setDailyQuota] = useState('54')
   const [inviteCode, setInviteCode] = useState('')
+  const [familyName, setFamilyName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const handleCreateFamily = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+    setLoading(true); setError('')
+    try {
+      const name = familyName.trim() || (lang === 'zh' ? `${profile?.display_name ?? '我'}的家` : `${profile?.display_name ?? 'My'}'s Home`)
+      await createHousehold(name, user.id)
+      await refreshProfile()
+      setStep('new-cat')
+    } catch (err: any) {
+      setError(err.message)
+    }
+    setLoading(false)
+  }
 
   const handleCreateCat = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,21 +55,29 @@ export default function SetupPage({ onComplete }: Props) {
     if (!user) return
     setLoading(true); setError('')
     try {
-      await joinHousehold(inviteCode.trim(), user.id)
+      await joinHousehold(inviteCode.trim().toUpperCase(), user.id)
       await refreshProfile()
+      showToast(lang === 'zh' ? '已加入家庭！' : 'Joined family!', 'success')
       onComplete()
-    } catch (err: any) { setError(err.message) }
+    } catch (err: any) {
+      const msg = err.message === '邀请码无效'
+        ? t.setup.invalidCode
+        : err.message
+      setError(msg)
+    }
     setLoading(false)
   }
 
+  // Step: Choice - Create or Join
   if (step === 'choice') {
     return (
       <div className="min-h-screen bg-amber-50 flex items-center justify-center p-4">
+        {ToastElement}
         <div className="w-full max-w-sm space-y-4">
           <h2 className="text-xl font-bold text-center text-gray-800">{t.setup.welcome}</h2>
           <button onClick={() => setStep('new-cat')}
             className="w-full p-4 bg-white rounded-2xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
               <Cat className="w-6 h-6 text-amber-600" />
             </div>
             <div className="text-left">
@@ -59,7 +87,7 @@ export default function SetupPage({ onComplete }: Props) {
           </button>
           <button onClick={() => setStep('join')}
             className="w-full p-4 bg-white rounded-2xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
               <Users className="w-6 h-6 text-blue-600" />
             </div>
             <div className="text-left">
@@ -72,30 +100,64 @@ export default function SetupPage({ onComplete }: Props) {
     )
   }
 
+  // Step: Join family
   if (step === 'join') {
     return (
       <div className="min-h-screen bg-amber-50 flex items-center justify-center p-4">
+        {ToastElement}
         <form onSubmit={handleJoin} className="w-full max-w-sm bg-white rounded-2xl shadow-sm p-6 space-y-4">
           <h2 className="text-xl font-bold text-gray-800">{t.setup.joinFamily}</h2>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t.setup.inviteCode}</label>
             <input type="text" value={inviteCode} onChange={e => setInviteCode(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-center text-lg tracking-widest"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-center text-lg tracking-widest uppercase"
               placeholder={t.setup.inviteCodePlaceholder} maxLength={8} required />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button type="submit" disabled={loading}
-            className="w-full py-2.5 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 disabled:opacity-50">
+            className="w-full py-2.5 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 disabled:opacity-50 flex items-center justify-center gap-2">
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {loading ? t.setup.joining : t.setup.join}
           </button>
-          <button type="button" onClick={() => setStep('choice')} className="w-full text-sm text-gray-500">{t.common.back}</button>
+          <button type="button" onClick={() => { setStep('choice'); setError('') }}
+            className="w-full text-sm text-gray-500">{t.common.back}</button>
         </form>
       </div>
     )
   }
 
+  // Step: Create family (if no household) + add cat
+  // Two sub-steps: first create household if needed, then add cat
+  if (!profile?.household_id) {
+    return (
+      <div className="min-h-screen bg-amber-50 flex items-center justify-center p-4">
+        {ToastElement}
+        <form onSubmit={handleCreateFamily} className="w-full max-w-sm bg-white rounded-2xl shadow-sm p-6 space-y-4">
+          <h2 className="text-xl font-bold text-gray-800">{t.setup.createFamily}</h2>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.setup.familyName}</label>
+            <input type="text" value={familyName} onChange={e => setFamilyName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400"
+              placeholder={t.setup.familyNamePlaceholder} maxLength={30} />
+            <p className="text-xs text-gray-400 mt-1">{t.setup.familyNameHint}</p>
+          </div>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          <button type="submit" disabled={loading}
+            className="w-full py-2.5 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 disabled:opacity-50 flex items-center justify-center gap-2">
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {t.common.confirm}
+          </button>
+          <button type="button" onClick={() => { setStep('choice'); setError('') }}
+            className="w-full text-sm text-gray-500">{t.common.back}</button>
+        </form>
+      </div>
+    )
+  }
+
+  // Has household, add cat
   return (
     <div className="min-h-screen bg-amber-50 flex items-center justify-center p-4">
+      {ToastElement}
       <form onSubmit={handleCreateCat} className="w-full max-w-sm bg-white rounded-2xl shadow-sm p-6 space-y-4">
         <h2 className="text-xl font-bold text-gray-800">{t.setup.addCat}</h2>
         <div>
@@ -113,12 +175,10 @@ export default function SetupPage({ onComplete }: Props) {
         </div>
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <button type="submit" disabled={loading}
-          className="w-full py-2.5 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 disabled:opacity-50">
+          className="w-full py-2.5 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 disabled:opacity-50 flex items-center justify-center gap-2">
+          {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           {loading ? t.setup.creating : t.setup.startUsing}
         </button>
-        {!profile?.household_id && (
-          <button type="button" onClick={() => setStep('choice')} className="w-full text-sm text-gray-500">{t.common.back}</button>
-        )}
       </form>
     </div>
   )
