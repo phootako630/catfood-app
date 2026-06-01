@@ -119,6 +119,18 @@ export async function addWeightLog(log: { cat_id: string; weight_kg: number; rec
   return data as WeightLog
 }
 
+// ── Profile ──
+export async function updateProfile(userId: string, fields: { display_name?: string }) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(fields)
+    .eq('id', userId)
+    .select()
+    .single()
+  if (error) throw error
+  return data as Profile
+}
+
 // ── Household ──
 export async function joinHousehold(inviteCode: string, userId: string) {
   const { data: household, error } = await supabase
