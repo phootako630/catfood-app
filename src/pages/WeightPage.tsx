@@ -162,7 +162,7 @@ export default function WeightPage() {
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#9ca3af' }} />
                 <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#9ca3af' }}
                   tickFormatter={v => `${v}kg`} />
-                <Tooltip formatter={(v: number) => [`${v} kg`, t.weight.title]}
+                <Tooltip formatter={((v: number) => [`${v} kg`, t.weight.title]) as never}
                   labelStyle={{ color: '#6b7280' }}
                   contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 13 }} />
                 <Line type="monotone" dataKey="weight" stroke="#f59e0b" strokeWidth={2.5}

@@ -1,6 +1,5 @@
 import { supabase } from './supabase'
 import type { Cat, DietPlan, FeedingLog, WeightLog, Profile } from '../types/database'
-import { startOfDay, endOfDay } from 'date-fns'
 
 // ── Cats ──
 export async function getCats() {
@@ -60,13 +59,13 @@ export async function getTodayFeedings(catId: string, timezone: string = 'Asia/S
   const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: timezone })
   const todayStr = formatter.format(now) // YYYY-MM-DD in user's TZ
 
-  const dayStart = new Date(`${todayStr}T00:00:00`)
-  const dayEnd = new Date(`${todayStr}T23:59:59.999`)
-
-  // Convert to UTC ISO strings for query
+  // Anchor the day boundaries in UTC (note the trailing "Z"), then shift by the
+  // target timezone offset exactly once. Parsing WITHOUT "Z" would make the
+  // browser apply its own local offset first, double-counting the shift.
   const tzOffset = getTimezoneOffsetMs(timezone)
-  const utcStart = new Date(dayStart.getTime() - tzOffset).toISOString()
-  const utcEnd = new Date(dayEnd.getTime() - tzOffset).toISOString()
+  const midnightUtc = new Date(`${todayStr}T00:00:00Z`).getTime()
+  const utcStart = new Date(midnightUtc - tzOffset).toISOString()
+  const utcEnd = new Date(midnightUtc - tzOffset + 24 * 60 * 60 * 1000 - 1).toISOString()
 
   const { data, error } = await supabase
     .from('feeding_logs')
