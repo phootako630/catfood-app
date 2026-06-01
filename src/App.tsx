@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { LanguageProvider, useLang } from './i18n/LanguageContext'
 import AuthPage from './pages/AuthPage'
 import SetupPage from './pages/SetupPage'
 import DashboardPage from './pages/DashboardPage'
+import WeightPage from './pages/WeightPage'
 import SettingsPage from './pages/SettingsPage'
+import BottomNav, { type Page } from './components/BottomNav'
 import { getCats } from './lib/api'
 
 function AppContent() {
   const { user, profile, loading } = useAuth()
-  const [page, setPage] = useState<'dashboard' | 'settings' | 'setup'>('dashboard')
+  const { t } = useLang()
+  const [page, setPage] = useState<Page | 'setup'>('dashboard')
   const [hasCats, setHasCats] = useState<boolean | null>(null)
 
   useEffect(() => {
@@ -22,7 +26,7 @@ function AppContent() {
   if (loading) {
     return (
       <div className="min-h-screen bg-amber-50 flex items-center justify-center">
-        <div className="animate-pulse text-amber-600 text-lg">🐱 加载中...</div>
+        <div className="animate-pulse text-amber-600 text-lg">🐱 {t.common.loading}</div>
       </div>
     )
   }
@@ -31,34 +35,34 @@ function AppContent() {
 
   if (!profile?.household_id || hasCats === false) {
     return (
-      <SetupPage
-        onComplete={() => {
-          setHasCats(true)
-          setPage('dashboard')
-        }}
-      />
+      <SetupPage onComplete={() => { setHasCats(true); setPage('dashboard') }} />
     )
   }
 
   if (hasCats === null) {
     return (
       <div className="min-h-screen bg-amber-50 flex items-center justify-center">
-        <div className="animate-pulse text-amber-600">加载中...</div>
+        <div className="animate-pulse text-amber-600">{t.common.loading}</div>
       </div>
     )
   }
 
-  if (page === 'settings') {
-    return <SettingsPage onBack={() => setPage('dashboard')} />
-  }
-
-  return <DashboardPage onOpenSettings={() => setPage('settings')} />
+  return (
+    <>
+      {page === 'dashboard' && <DashboardPage />}
+      {page === 'weight' && <WeightPage />}
+      {page === 'settings' && <SettingsPage />}
+      <BottomNav current={page as Page} onChange={setPage} />
+    </>
+  )
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </LanguageProvider>
   )
 }

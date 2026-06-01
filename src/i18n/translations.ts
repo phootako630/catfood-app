@@ -1,0 +1,92 @@
+export type Lang = 'zh' | 'en'
+
+export const translations = {
+  zh: {
+    app: { name: '喵粮管家', tagline: '精准控粮，科学减重' },
+    common: { loading: '加载中...', save: '保存', cancel: '取消', delete: '删除', confirm: '确认', back: '返回', noData: '暂无数据' },
+    auth: {
+      login: '登录', register: '注册', email: '邮箱', password: '密码',
+      nickname: '昵称', nicknamePlaceholder: '你的昵称',
+      passwordHint: '至少6位', processing: '处理中...',
+      noAccount: '还没有账号？', hasAccount: '已有账号？',
+      registerFailed: '注册失败',
+    },
+    setup: {
+      welcome: '欢迎！你要怎么开始？',
+      createFamily: '创建新家庭', createFamilyDesc: '添加你的猫，开始记录',
+      joinFamily: '加入家庭', joinFamilyDesc: '输入邀请码，和家人一起管理',
+      inviteCode: '邀请码', inviteCodePlaceholder: '8位邀请码',
+      invalidCode: '邀请码无效', joining: '加入中...', join: '加入',
+      addCat: '添加你的猫', catName: '猫咪名字', catNamePlaceholder: '如：橘子',
+      dailyQuota: '每日配额 (g)', dailyQuotaHint: '医生建议的每日猫粮总量',
+      creating: '创建中...', startUsing: '开始使用',
+    },
+    dashboard: {
+      remaining: '还可以喂', overBy: '已超出',
+      quickFeed: '快捷加粮', customPlaceholder: '自定义 (g)',
+      todayLog: '今日记录', times: '次',
+      noFeedings: '还没有喂食记录', undo: '撤销', unknown: '未知',
+    },
+    weight: {
+      title: '体重记录', addWeight: '记录体重',
+      weightKg: '体重 (kg)', weightPlaceholder: '如：5.2',
+      recording: '记录中...', record: '记录',
+      trend: '体重趋势', noTrend: '至少需要2条记录才能显示趋势',
+      recent: '最近记录', kg: 'kg',
+      noRecords: '还没有体重记录', target: '目标',
+      deleteConfirm: '确定删除这条记录？',
+    },
+    settings: {
+      title: '设置', myInfo: '我的信息',
+      inviteFamily: '邀请家人', inviteDesc: '分享邀请码，家人注册后输入即可加入',
+      members: '家庭成员', me: '我',
+      language: '语言', logout: '退出登录',
+    },
+    nav: { feeding: '喂食', weight: '体重', settings: '设置' },
+  },
+  en: {
+    app: { name: 'Cat Diet', tagline: 'Precise feeding, healthy weight' },
+    common: { loading: 'Loading...', save: 'Save', cancel: 'Cancel', delete: 'Delete', confirm: 'Confirm', back: 'Back', noData: 'No data' },
+    auth: {
+      login: 'Log In', register: 'Sign Up', email: 'Email', password: 'Password',
+      nickname: 'Nickname', nicknamePlaceholder: 'Your name',
+      passwordHint: 'At least 6 characters', processing: 'Processing...',
+      noAccount: "Don't have an account?", hasAccount: 'Already have an account?',
+      registerFailed: 'Registration failed',
+    },
+    setup: {
+      welcome: 'Welcome! How to start?',
+      createFamily: 'Create Family', createFamilyDesc: 'Add your cat and start tracking',
+      joinFamily: 'Join Family', joinFamilyDesc: 'Enter invite code to join',
+      inviteCode: 'Invite Code', inviteCodePlaceholder: '8-char code',
+      invalidCode: 'Invalid code', joining: 'Joining...', join: 'Join',
+      addCat: 'Add Your Cat', catName: 'Cat Name', catNamePlaceholder: 'e.g. Mochi',
+      dailyQuota: 'Daily Quota (g)', dailyQuotaHint: 'Vet-recommended daily food amount',
+      creating: 'Creating...', startUsing: 'Get Started',
+    },
+    dashboard: {
+      remaining: 'Remaining', overBy: 'Over by',
+      quickFeed: 'Quick Feed', customPlaceholder: 'Custom (g)',
+      todayLog: "Today's Log", times: 'times',
+      noFeedings: 'No feedings yet', undo: 'Undo', unknown: 'Unknown',
+    },
+    weight: {
+      title: 'Weight Log', addWeight: 'Record Weight',
+      weightKg: 'Weight (kg)', weightPlaceholder: 'e.g. 5.2',
+      recording: 'Recording...', record: 'Record',
+      trend: 'Weight Trend', noTrend: 'Need at least 2 records for trend',
+      recent: 'Recent Records', kg: 'kg',
+      noRecords: 'No weight records yet', target: 'Target',
+      deleteConfirm: 'Delete this record?',
+    },
+    settings: {
+      title: 'Settings', myInfo: 'Profile',
+      inviteFamily: 'Invite Family', inviteDesc: 'Share invite code for family to join',
+      members: 'Members', me: 'Me',
+      language: 'Language', logout: 'Log Out',
+    },
+    nav: { feeding: 'Feed', weight: 'Weight', settings: 'Settings' },
+  },
+} as const
+
+export type Translations = typeof translations['zh']
