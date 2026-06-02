@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { getDayWindowUtc } from './dateRange'
+export { getTodayLocalDate, shiftLocalDate } from './dateRange'
 import type { Cat, DietPlan, FeedingLog, WeightLog, Profile } from '../types/database'
 
 // ── Cats ──
@@ -54,10 +55,16 @@ export async function createDietPlan(plan: {
 }
 
 // ── Feeding Logs ──
-export async function getTodayFeedings(catId: string, timezone: string = 'Asia/Shanghai') {
-  // Pure window calculation lives in dateRange.ts (unit-tested).
-  const { startUtc, endUtc } = getDayWindowUtc(timezone)
-
+/**
+ * Fetch feedings for a specific local calendar date.
+ * `localDate` is YYYY-MM-DD in `timezone`; defaults to today.
+ */
+export async function getFeedingsByDate(
+  catId: string,
+  timezone: string = 'Asia/Shanghai',
+  localDate?: string,
+) {
+  const { startUtc, endUtc } = getDayWindowUtc(timezone, new Date(), localDate)
   const { data, error } = await supabase
     .from('feeding_logs')
     .select('*, profiles:fed_by(display_name)')
@@ -68,6 +75,10 @@ export async function getTodayFeedings(catId: string, timezone: string = 'Asia/S
   if (error) throw error
   return data as (FeedingLog & { profiles: { display_name: string } | null })[]
 }
+
+/** @deprecated use getFeedingsByDate */
+export const getTodayFeedings = (catId: string, timezone?: string) =>
+  getFeedingsByDate(catId, timezone)
 
 export async function addFeeding(log: { cat_id: string; amount_g: number; fed_by: string; note?: string }) {
   const { data, error } = await supabase

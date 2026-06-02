@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../i18n/LanguageContext'
-import { getCats, getActiveDietPlan, getTodayFeedings, addFeeding, deleteFeeding, createDietPlan } from '../lib/api'
+import { getCats, getActiveDietPlan, getFeedingsByDate, addFeeding, deleteFeeding, createDietPlan, getTodayLocalDate, shiftLocalDate } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import type { Cat, DietPlan, FeedingLog } from '../types/database'
-import { Plus, Undo2, Clock, Settings2 } from 'lucide-react'
+import { Plus, Undo2, Clock, Settings2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
+
+const TIMEZONE = 'Asia/Shanghai'
 
 type FeedingWithProfile = FeedingLog & { profiles: { display_name: string } | null }
 
@@ -22,12 +24,17 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [feedingLoading, setFeedingLoading] = useState(false)
 
+  // Date navigation
+  const [selectedDate, setSelectedDate] = useState<string>(() => getTodayLocalDate(TIMEZONE))
+  const todayDate = getTodayLocalDate(TIMEZONE)
+  const isToday = selectedDate === todayDate
+
   // Quota setup form
   const [showQuotaForm, setShowQuotaForm] = useState(false)
   const [quotaInput, setQuotaInput] = useState('54')
   const [quotaSaving, setQuotaSaving] = useState(false)
 
-  const loadData = useCallback(async (catId?: string) => {
+  const loadData = useCallback(async (catId?: string, date?: string) => {
     try {
       const catList = await getCats()
       setCats(catList)
@@ -36,7 +43,7 @@ export default function DashboardPage() {
         setSelectedCat(current)
         const [plan, logs] = await Promise.all([
           getActiveDietPlan(current.id),
-          getTodayFeedings(current.id),
+          getFeedingsByDate(current.id, TIMEZONE, date),
         ])
         setDietPlan(plan)
         setFeedings(logs)
@@ -49,17 +56,41 @@ export default function DashboardPage() {
     }
   }, [])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { loadData(undefined, selectedDate) }, [loadData, selectedDate])
 
+  // Realtime sync — only auto-refresh when viewing today
   useEffect(() => {
     if (!selectedCat) return
     const channel = supabase
       .channel('feeding-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'feeding_logs', filter: `cat_id=eq.${selectedCat.id}` },
-        () => { loadData(selectedCat.id) }
+        () => {
+          const today = getTodayLocalDate(TIMEZONE)
+          // Only refresh if we're still on today's view
+          setSelectedDate(d => {
+            if (d === today) loadData(selectedCat.id, today)
+            return d
+          })
+        }
       ).subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [selectedCat, loadData])
+
+  const handleDateShift = (days: number) => {
+    setSelectedDate(d => {
+      const next = shiftLocalDate(d, days)
+      // Don't go past today
+      if (next > getTodayLocalDate(TIMEZONE)) return d
+      loadData(selectedCat?.id, next)
+      return next
+    })
+  }
+
+  const getDateLabel = (date: string) => {
+    if (date === todayDate) return t.dashboard.today
+    if (date === shiftLocalDate(todayDate, -1)) return t.dashboard.yesterday
+    return date
+  }
 
   const totalFed = feedings.reduce((sum, f) => sum + Number(f.amount_g), 0)
   const quota = dietPlan?.daily_quota_g ?? 0
@@ -68,11 +99,11 @@ export default function DashboardPage() {
   const isOver = totalFed > quota && quota > 0
 
   const handleFeed = async (amount: number) => {
-    if (!user || !selectedCat || amount <= 0) return
+    if (!user || !selectedCat || amount <= 0 || !isToday) return
     setFeedingLoading(true)
     try {
       await addFeeding({ cat_id: selectedCat.id, amount_g: amount, fed_by: user.id })
-      await loadData(selectedCat.id)
+      await loadData(selectedCat.id, selectedDate)
       setCustomAmount('')
     } catch (err) { console.error(err) }
     setFeedingLoading(false)
@@ -81,7 +112,7 @@ export default function DashboardPage() {
   const handleUndo = async (feedingId: string) => {
     try {
       await deleteFeeding(feedingId)
-      await loadData(selectedCat?.id)
+      await loadData(selectedCat?.id, selectedDate)
     } catch (err) { console.error(err) }
   }
 
@@ -171,6 +202,41 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Date Navigation */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-1">
+        <button
+          onClick={() => handleDateShift(-1)}
+          className="p-2 rounded-full hover:bg-amber-100 text-amber-600 transition-colors"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <div className="text-center">
+          <span className="font-semibold text-gray-700">{getDateLabel(selectedDate)}</span>
+          {selectedDate !== todayDate && (
+            <div className="text-xs text-gray-400">{selectedDate}</div>
+          )}
+        </div>
+        <button
+          onClick={() => handleDateShift(1)}
+          disabled={isToday}
+          className="p-2 rounded-full hover:bg-amber-100 text-amber-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Back to today pill */}
+      {!isToday && (
+        <div className="flex justify-center pb-1">
+          <button
+            onClick={() => { setSelectedDate(todayDate); loadData(selectedCat?.id, todayDate) }}
+            className="text-xs px-3 py-1 bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 transition-colors"
+          >
+            ↩ {t.dashboard.today}
+          </button>
+        </div>
+      )}
+
       {/* Progress Ring */}
       <div className="px-4 py-6">
         <div className="bg-white rounded-2xl shadow-sm p-6">
@@ -201,8 +267,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Feed */}
-      <div className="px-4 mb-4">
+      {/* Quick Feed — only shown for today */}
+      {isToday && <div className="px-4 mb-4">
         <div className="bg-white rounded-2xl shadow-sm p-4">
           <p className="text-sm font-medium text-gray-700 mb-3">{t.dashboard.quickFeed}</p>
           <div className="flex gap-2 flex-wrap">
@@ -224,7 +290,7 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* Today Timeline */}
       <div className="px-4">
@@ -232,6 +298,7 @@ export default function DashboardPage() {
           <p className="text-sm font-medium text-gray-700 mb-3">
             {t.dashboard.todayLog} <span className="text-gray-400">({feedings.length}{t.dashboard.times})</span>
           </p>
+
           {feedings.length === 0 ? (
             <p className="text-center text-gray-400 py-4 text-sm">{t.dashboard.noFeedings}</p>
           ) : (
