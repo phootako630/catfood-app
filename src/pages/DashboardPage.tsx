@@ -58,6 +58,25 @@ export default function DashboardPage() {
 
   useEffect(() => { loadData(undefined, selectedDate) }, [loadData, selectedDate])
 
+  // Auto-advance to today when the browser tab becomes visible again (e.g. next morning).
+  // selectedDate is React state — it stays frozen if the tab was left open overnight.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) return
+      const today = getTodayLocalDate(TIMEZONE)
+      setSelectedDate(prev => {
+        if (prev !== today) {
+          // Date has changed — jump to today and reload
+          loadData(undefined, today)
+          return today
+        }
+        return prev
+      })
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [loadData])
+
   // Realtime sync — only auto-refresh when viewing today
   useEffect(() => {
     if (!selectedCat) return
