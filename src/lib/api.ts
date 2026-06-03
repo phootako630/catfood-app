@@ -61,7 +61,7 @@ export async function createDietPlan(plan: {
  */
 export async function getFeedingsByDate(
   catId: string,
-  timezone: string = 'Asia/Shanghai',
+  timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
   localDate?: string,
 ) {
   const { startUtc, endUtc } = getDayWindowUtc(timezone, new Date(), localDate)
@@ -77,7 +77,7 @@ export async function getFeedingsByDate(
 }
 
 /** @deprecated use getFeedingsByDate */
-export const getTodayFeedings = (catId: string, timezone?: string) =>
+export const getTodayFeedings = (catId: string, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone) =>
   getFeedingsByDate(catId, timezone)
 
 export async function addFeeding(log: { cat_id: string; amount_g: number; fed_by: string; note?: string }) {

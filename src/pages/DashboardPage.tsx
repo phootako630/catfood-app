@@ -7,7 +7,8 @@ import type { Cat, DietPlan, FeedingLog } from '../types/database'
 import { Plus, Undo2, Clock, Settings2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
 
-const TIMEZONE = 'Asia/Shanghai'
+// Use the browser's local timezone — works correctly regardless of where the user is.
+const TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
 
 type FeedingWithProfile = FeedingLog & { profiles: { display_name: string } | null }
 
