@@ -50,7 +50,14 @@ export const translations = {
       editName: '修改昵称', namePlaceholder: '输入新昵称',
       nameEmpty: '昵称不能为空', nameUpdated: '昵称已更新',
     },
-    nav: { feeding: '喂食', weight: '体重', settings: '设置' },
+    trends: {
+      title: '趋势', days: '天',
+      feedingTitle: '喂食趋势', quota: '每日配额',
+      fed: '喂食量', normal: '正常', over: '超出',
+      weightTitle: '体重趋势', targetWeight: '目标体重',
+      weight: '体重', noData: '暂无喂食记录', weightNoData: '至少需要2条体重记录',
+    },
+    nav: { feeding: '喂食', weight: '体重', trends: '趋势', settings: '设置' },
   },
   en: {
     app: { name: 'Cat Diet', tagline: 'Precise feeding, healthy weight' },
@@ -101,7 +108,14 @@ export const translations = {
       editName: 'Edit Name', namePlaceholder: 'Enter new name',
       nameEmpty: 'Name cannot be empty', nameUpdated: 'Name updated',
     },
-    nav: { feeding: 'Feed', weight: 'Weight', settings: 'Settings' },
+    trends: {
+      title: 'Trends', days: 'd',
+      feedingTitle: 'Feeding Trend', quota: 'Daily quota',
+      fed: 'Fed', normal: 'Normal', over: 'Over',
+      weightTitle: 'Weight Trend', targetWeight: 'Target weight',
+      weight: 'Weight', noData: 'No feeding records yet', weightNoData: 'Need at least 2 weight records',
+    },
+    nav: { feeding: 'Feed', weight: 'Weight', trends: 'Trends', settings: 'Settings' },
   },
 } as const
 

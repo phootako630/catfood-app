@@ -1,16 +1,17 @@
-import { Utensils, Weight, Settings } from 'lucide-react'
+import { Utensils, Weight, Settings, TrendingUp } from 'lucide-react'
 import { useLang } from '../i18n/LanguageContext'
 
-export type Page = 'dashboard' | 'weight' | 'settings'
+export type Page = 'dashboard' | 'weight' | 'trends' | 'settings'
 
 interface Props {
   current: Page
   onChange: (page: Page) => void
 }
 
-const tabs: { key: Page; icon: typeof Utensils; labelKey: 'feeding' | 'weight' | 'settings' }[] = [
+const tabs: { key: Page; icon: typeof Utensils; labelKey: 'feeding' | 'weight' | 'trends' | 'settings' }[] = [
   { key: 'dashboard', icon: Utensils, labelKey: 'feeding' },
   { key: 'weight', icon: Weight, labelKey: 'weight' },
+  { key: 'trends', icon: TrendingUp, labelKey: 'trends' },
   { key: 'settings', icon: Settings, labelKey: 'settings' },
 ]
 

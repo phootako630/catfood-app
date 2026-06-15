@@ -95,6 +95,46 @@ export async function deleteFeeding(id: string) {
   if (error) throw error
 }
 
+/**
+ * Fetch daily feeding totals for the last `days` calendar days (inclusive of today),
+ * in the user's local timezone. Returns an array sorted oldest → newest.
+ */
+export async function getFeedingTrend(
+  catId: string,
+  days: number = 14,
+  timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
+): Promise<{ date: string; total_g: number }[]> {
+  const { getDayWindowUtc, getTodayLocalDate, shiftLocalDate } = await import('./dateRange')
+  const today = getTodayLocalDate(timezone)
+  const startDate = shiftLocalDate(today, -(days - 1))
+  const { startUtc } = getDayWindowUtc(timezone, new Date(), startDate)
+  const { endUtc } = getDayWindowUtc(timezone, new Date(), today)
+
+  const { data, error } = await supabase
+    .from('feeding_logs')
+    .select('fed_at, amount_g')
+    .eq('cat_id', catId)
+    .gte('fed_at', startUtc)
+    .lte('fed_at', endUtc)
+    .order('fed_at', { ascending: true })
+  if (error) throw error
+
+  // Bucket by local date
+  const map: Record<string, number> = {}
+  for (const row of data as { fed_at: string; amount_g: number }[]) {
+    const localDate = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date(row.fed_at))
+    map[localDate] = (map[localDate] ?? 0) + Number(row.amount_g)
+  }
+
+  // Fill every day in range (missing days = 0)
+  const result: { date: string; total_g: number }[] = []
+  for (let i = 0; i < days; i++) {
+    const d = shiftLocalDate(startDate, i)
+    result.push({ date: d, total_g: map[d] ?? 0 })
+  }
+  return result
+}
+
 // ── Weight Logs ──
 export async function getWeightLogs(catId: string, limit = 30) {
   const { data, error } = await supabase

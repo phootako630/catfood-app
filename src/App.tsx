@@ -5,6 +5,7 @@ import AuthPage from './pages/AuthPage'
 import SetupPage from './pages/SetupPage'
 import DashboardPage from './pages/DashboardPage'
 import WeightPage from './pages/WeightPage'
+import TrendsPage from './pages/TrendsPage'
 import SettingsPage from './pages/SettingsPage'
 import BottomNav, { type Page } from './components/BottomNav'
 import { getCats } from './lib/api'
@@ -51,6 +52,7 @@ function AppContent() {
     <>
       {page === 'dashboard' && <DashboardPage />}
       {page === 'weight' && <WeightPage />}
+      {page === 'trends' && <TrendsPage />}
       {page === 'settings' && <SettingsPage />}
       <BottomNav current={page as Page} onChange={setPage} />
     </>
