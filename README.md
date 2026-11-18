@@ -29,7 +29,6 @@ weight trend tracking.
 - **Supabase** — PostgreSQL, Auth, and Realtime
 - **Tailwind CSS** for styling
 - **Recharts** for the weight trend chart
-- **React Router** (HashRouter, for iframe/proxy compatibility)
 - **Vitest** for unit tests
 
 ## Getting Started
@@ -88,6 +87,25 @@ npm run dev
 | `npm run test:watch` | Run unit tests in watch mode |
 | `npm run lint` | Run ESLint |
 
+## Deploy to Vercel
+
+The app is a static Vite build talking directly to Supabase, so any static host
+works. `vercel.json` is already set up for Vercel.
+
+1. In Vercel, **Add New → Project** and import this GitHub repository.
+   The framework (Vite), build command and output directory (`dist`) are read
+   from `vercel.json`.
+2. Under **Environment Variables**, add `VITE_SUPABASE_URL` and
+   `VITE_SUPABASE_ANON_KEY` (the same values as your local `.env`) for
+   Production and Preview.
+3. Deploy. Every push to the default branch redeploys automatically.
+4. Optional: in Supabase → **Authentication → URL Configuration**, set the
+   **Site URL** to your Vercel domain.
+
+`VITE_*` variables are baked in at build time — after changing them in Vercel,
+redeploy. If they are missing, the deployed page shows a "Missing
+configuration" notice instead of a blank screen.
+
 ## Tests
 
 Unit tests cover the timezone-aware "today" window used to fetch a day's
@@ -101,7 +119,5 @@ npm test
 
 ## Notes
 
-- Uses **HashRouter** rather than BrowserRouter so the app works inside an iframe
-  proxy without a blank screen.
 - Email confirmation is disabled in Supabase for low-friction family use.
 - Food intake is tracked in **grams** against a vet-set quota — no calorie math.
